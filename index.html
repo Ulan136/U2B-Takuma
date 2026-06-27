@@ -127,10 +127,10 @@
       <tr>
         <th>#</th>
         <th>Артикул</th>
-        <th>Кросс-номера</th>
-        <th>Применимость</th>
         <th style="text-align:right">Закуп</th>
         <th style="text-align:right">Продажа</th>
+        <th>Кросс-номера</th>
+        <th>Применимость</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -183,10 +183,10 @@ function renderRows(rows) {
     <tr>
       <td style="color:#ccc;font-size:11px">${i+1}</td>
       <td><div class="art">${d.art}</div><div style="margin-top:4px">${catBadge(d.category)}</div></td>
-      <td><div class="cross">${d.cross || '—'}</div></td>
-      <td><div class="app-text">${d.app}</div></td>
       <td class="price-buy">${d.price.toLocaleString('ru')} ₸</td>
       <td class="price-sell">${sell(d.price).toLocaleString('ru')} ₸</td>
+      <td><div class="cross">${d.cross || '—'}</div></td>
+      <td><div class="app-text">${d.app}</div></td>
     </tr>
   `).join('');
 }
