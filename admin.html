@@ -303,8 +303,8 @@ function goScreen(name) {
 async function loadHome() {
   try {
     const [ordersRes, shopsRes] = await Promise.all([
-      fetch(WEBAPP_URL + '?action=getOrders'),
-      fetch(WEBAPP_URL + '?action=getShops')
+      fetch(WEBAPP_URL + '?action=getOrders', { redirect: 'follow' }),
+      fetch(WEBAPP_URL + '?action=getShops', { redirect: 'follow' })
     ]);
     const ordersData = await ordersRes.json();
     const shopsData  = await shopsRes.json();
@@ -343,7 +343,7 @@ async function loadOrders() {
   const el = document.getElementById('ordersList');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
   try {
-    const res = await fetch(WEBAPP_URL + '?action=getOrders');
+    const res = await fetch(WEBAPP_URL + '?action=getOrders', { redirect: 'follow' });
     const data = await res.json();
     if (data.ok) {
       allOrders = data.orders || [];
@@ -435,7 +435,7 @@ function setOrderFilter(f, el) {
 async function updateStatus(orderNum, newStatus) {
   try {
     await fetch(WEBAPP_URL, {
-      method: 'POST',
+      method: 'POST', redirect: 'follow',
       body: JSON.stringify({ action: 'updateStatus', orderNum, status: newStatus })
     });
     // Update local
@@ -478,7 +478,7 @@ async function loadShops() {
   const el = document.getElementById('shopsList');
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Загрузка...</div>';
   try {
-    const res = await fetch(WEBAPP_URL + '?action=getShops');
+    const res = await fetch(WEBAPP_URL + '?action=getShops', { redirect: 'follow' });
     const data = await res.json();
     if (data.ok) {
       allShops = data.shops || [];
@@ -551,7 +551,7 @@ async function saveShop() {
   };
 
   try {
-    await fetch(WEBAPP_URL, { method:'POST', body: JSON.stringify(payload) });
+    await fetch(WEBAPP_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
     closeModal('shopModal');
     loadShops();
   } catch(e) {
