@@ -219,7 +219,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;min-height:100vh
   <!-- Поиск -->
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="Поиск по артикулу или авто..." oninput="renderProducts()"/>
+    <input type="text" id="searchInput" placeholder="Поиск: toyota, бмв, камри, hyundai..." 
+      oninput="onSearch()" onkeydown="onSearchKey(event)" autocomplete="off"/>
+    <div id="suggestBox" class="suggest-box hidden"></div>
   </div>
 
   <!-- Категории -->
@@ -340,6 +342,140 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;min-height:100vh
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
+// ─── УМНЫЙ ПОИСК ─────────────────────────────────────────────────────────────
+const TRANSLIT = {
+  // Русский → английский (марки авто)
+  'бмв':'bmw','тойота':'toyota','тоёта':'toyota','хендай':'hyundai','хёндай':'hyundai',
+  'киа':'kia','киа':'kia','ниссан':'nissan','мерседес':'mercedes','мерс':'mercedes',
+  'бенц':'benz','ауди':'audi','фольксваген':'volkswagen','фольцваген':'volkswagen',
+  'вольво':'volvo','шевроле':'chevrolet','шеви':'chevrolet','опель':'opel',
+  'мазда':'mazda','митсубиси':'mitsubishi','митсубishi':'mitsubishi','мицубиси':'mitsubishi',
+  'субару':'subaru','лексус':'lexus','хонда':'honda','пежо':'peugeot','пежо':'peugeot',
+  'рено':'renault','рено':'renault','форд':'ford','джип':'jeep','порше':'porsche',
+  'ягуар':'jaguar','тесла':'tesla','геели':'geely','гили':'geely','чери':'chery',
+  'лада':'lada','ваз':'lada','газ':'gaz','уаз':'uaz','камри':'camry',
+  'солярис':'solaris','крета':'creta','туксон':'tucson','спортейдж':'sportage',
+  'прадо':'prado','крузер':'cruiser','рав':'rav','икс':'x','ленд':'land',
+  'гольф':'golf','пассат':'passat','поло':'polo','тигуан':'tiguan','туарег':'touareg',
+  'октавия':'octavia','суперб':'superb','фабия':'fabia','рапид':'rapid',
+  'санта':'santa','соната':'sonata','элантра':'elantra','акцент':'accent',
+  'аутлендер':'outlander','паджеро':'pajero','лансер':'lancer','галант':'galant',
+  'форестер':'forester','импреза':'impreza','аутбек':'outback','легаси':'legacy',
+  'логан':'logan','дастер':'duster','сандеро':'sandero','каптюр':'kaptur',
+  'аркана':'arkana','веста':'vesta','гранта':'granta','калина':'kalina',
+  'нива':'niva','нексия':'nexia','матиз':'matiz','авео':'aveo','ланос':'lanos',
+  'круз':'cruze','малибу':'malibu','эквинокс':'equinox','каптива':'captiva',
+  'атлас':'atlas','монжаро':'monjaro','тигго':'tiggo','аризо':'arrizo',
+  'омода':'omoda','эксид':'exeed','джейку':'jaecoo','джетур':'jetour',
+  'хавал':'haval','танк':'tank','гвм':'gwm','ховер':'hover',
+  'солярис':'solaris','рио':'rio','серата':'cerato','оптима':'optima',
+  'соренто':'sorento','мохаве':'mohave','карнивал':'carnival','стингер':'stinger',
+  'паджеро':'pajero','сигма':'sigma','галант':'galant','колт':'colt',
+  'л200':'l200','делика':'delica','аsx':'asx','аутлендер':'outlander',
+  'прага':'prado','ленд крузер':'land cruiser','фортунер':'fortuner',
+  'альфард':'alphard','прадо':'prado','хайлендер':'highlander','сиенна':'sienna',
+  'королла':'corolla','авенсис':'avensis','аурис':'auris','ярис':'yaris','рав4':'rav4',
+  'камри':'camry','лексус':'lexus','нх':'nx','рх':'rx','гх':'gx','лх':'lx',
+  'е36':'e36','е46':'e46','е39':'e39','е34':'e34','е30':'e30','е38':'e38',
+  'ф10':'f10','ф30':'f30','ф15':'f15','х5':'x5','х6':'x6','х3':'x3',
+  'а3':'a3','а4':'a4','а5':'a5','а6':'a6','а8':'a8','к3':'k3','к5':'k5','к7':'k7',
+  'в202':'w202','в211':'w211','в212':'w212','в220':'w220','в203':'w203',
+};
+
+function smartNormalize(q) {
+  q = q.toLowerCase().trim();
+  // Replace Russian car names with English
+  let result = q;
+  for (const [ru, en] of Object.entries(TRANSLIT)) {
+    result = result.replace(new RegExp(ru, 'g'), en);
+  }
+  return result;
+}
+
+function smartMatch(product, query) {
+  if (!query) return true;
+  const q = smartNormalize(query);
+  const art = product.art.toLowerCase();
+  const app = product.app.toLowerCase();
+  // Also normalize the product text
+  const appNorm = smartNormalize(app);
+  
+  // Split query into words for multi-word search
+  const words = q.split(/\s+/).filter(Boolean);
+  return words.every(word => 
+    art.includes(word) || app.includes(word) || appNorm.includes(word)
+  );
+}
+
+// Autocomplete suggestions
+let suggestIdx = -1;
+function onSearch() {
+  renderProducts();
+  showSuggestions();
+}
+
+function showSuggestions() {
+  const q = document.getElementById('searchInput').value.trim();
+  const box = document.getElementById('suggestBox');
+  if (q.length < 1) { box.classList.add('hidden'); return; }
+
+  const qNorm = smartNormalize(q);
+  // Collect unique auto brands/models matching query
+  const matches = new Set();
+  PRODUCTS.forEach(p => {
+    if (smartMatch(p, q)) {
+      // Extract short model name
+      const parts = p.app.split(/[;,\/\[]/);
+      parts.forEach(part => {
+        part = part.trim();
+        if (part.length > 2 && part.length < 40 && smartNormalize(part).includes(qNorm.split(' ')[0])) {
+          matches.add(part.split(' ').slice(0,3).join(' '));
+        }
+      });
+    }
+  });
+
+  const items = [...matches].slice(0, 6);
+  if (items.length === 0) { box.classList.add('hidden'); return; }
+
+  box.innerHTML = items.map((s,i) => 
+    `<div class="suggest-item" onclick="selectSuggest('${s.replace(/'/g,"\'")}')">
+      <span>🚗</span><span>${s}</span>
+    </div>`
+  ).join('');
+  box.classList.remove('hidden');
+  suggestIdx = -1;
+}
+
+function selectSuggest(val) {
+  document.getElementById('searchInput').value = val;
+  document.getElementById('suggestBox').classList.add('hidden');
+  renderProducts();
+}
+
+function onSearchKey(e) {
+  const box = document.getElementById('suggestBox');
+  const items = box.querySelectorAll('.suggest-item');
+  if (e.key === 'ArrowDown') {
+    suggestIdx = Math.min(suggestIdx + 1, items.length - 1);
+    items.forEach((el,i) => el.className = 'suggest-item' + (i===suggestIdx?' active':''));
+  } else if (e.key === 'ArrowUp') {
+    suggestIdx = Math.max(suggestIdx - 1, -1);
+    items.forEach((el,i) => el.className = 'suggest-item' + (i===suggestIdx?' active':''));
+  } else if (e.key === 'Enter' && suggestIdx >= 0) {
+    items[suggestIdx].click();
+  } else if (e.key === 'Escape') {
+    box.classList.add('hidden');
+  }
+}
+
+// Close suggest on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('suggestBox')?.classList.add('hidden');
+  }
+});
+
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbybpSsH6WRlGsxgS4y068J4ERQY9uZXYWrR-WjRdnh_rLbp1UMAAK8FtOn-XCZjAi4b/exec";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -404,11 +540,10 @@ function setCat(cat, el) {
 }
 
 function renderProducts() {
-  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const q = document.getElementById('searchInput').value.trim();
   const filtered = PRODUCTS.filter(p => {
     if (currentCat !== 'all' && p.category !== currentCat) return false;
-    if (!q) return true;
-    return p.art.toLowerCase().includes(q) || p.app.toLowerCase().includes(q);
+    return smartMatch(p, q);
   });
 
   const list = document.getElementById('productList');
