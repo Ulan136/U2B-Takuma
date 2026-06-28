@@ -242,15 +242,15 @@ function exportPDF() {
   const tableRows = rows.map((d,i) => [
     i+1,
     d.art,
-    (d.cross||'—').substring(0,35),
-    d.app.substring(0,80),
     d.price.toLocaleString('ru') + ' T',
-    sell(d.price).toLocaleString('ru') + ' T'
+    sell(d.price).toLocaleString('ru') + ' T',
+    (d.cross||'—').substring(0,35),
+    d.app.substring(0,80)
   ]);
 
   doc.autoTable({
     startY: 22,
-    head: [['#','Артикул','Кросс-номера','Применимость','Закуп','Продажа']],
+    head: [['#','Артикул','Закуп','Продажа','Кросс-номера','Применимость']],
     body: tableRows,
     styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
     headStyles: { fillColor: [26,26,78], textColor: [255,255,255], fontStyle: 'bold', fontSize: 7.5 },
