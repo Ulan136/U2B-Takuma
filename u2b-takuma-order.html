@@ -634,9 +634,9 @@ function setQty(art, qty) {
   const pbEl = document.getElementById('pb_' + key);
   if (pbEl && p) {
     const q2 = cart[art] || 0;
-    pbEl.innerHTML = \`<div class="price-label">цена</div>
-      <div class="price-val">\${sellPrice(p.price).toLocaleString('ru')} ₸</div>
-      \${q2 > 0 ? \`<div class="price-sum">= \${(sellPrice(p.price)*q2).toLocaleString('ru')} ₸</div>\` : ''}\`;
+        var _pv = sellPrice(p.price).toLocaleString('ru');
+    var _sh = q2 > 0 ? '<div class="price-sum">= ' + (sellPrice(p.price)*q2).toLocaleString('ru') + ' ₸</div>' : '';
+    pbEl.innerHTML = '<div class="price-label">цена</div><div class="price-val">' + _pv + ' ₸</div>' + _sh;
   }
   if (wrapEl) {
     const q = cart[art] || 0;
@@ -922,6 +922,13 @@ function newOrder() {
   });
   goStep1();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetch(WEBAPP_URL + '?action=getPrices', { redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.ok && d.markup) MARKUP = d.markup; })
+    .catch(function(){});
+});
 </script>
 </body>
 </html>
