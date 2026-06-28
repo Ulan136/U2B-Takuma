@@ -86,6 +86,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;min-height:100vh
 .qty-add-btn{padding:7px 12px;border:1.5px solid #1a1a4e;border-radius:8px;background:#f0f0ff;color:#1a1a4e;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .qty-add-btn:hover{background:#1a1a4e;color:#fff}
 
+.qp{padding:5px 7px;border:1.5px solid #ddd;border-radius:6px;background:#f5f5f5;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.qp-on{background:#1a1a4e!important;color:#fff!important;border-color:#1a1a4e!important}
+.qp:hover{background:#e8e8ff;border-color:#1a1a4e}
+.qdel{padding:5px 7px;border:none;border-radius:6px;background:#fce4ec;color:#e53935;font-size:13px;cursor:pointer;font-weight:700}
+.qadd{padding:7px 12px;border:1.5px solid #1a1a4e;border-radius:8px;background:#f0f0ff;color:#1a1a4e;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.qadd:hover{background:#1a1a4e;color:#fff}
+.qty-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 /* SEARCH */
 .search-wrap{position:relative;margin-bottom:12px}
 .search-wrap input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;outline:none;background:#fff}
@@ -420,10 +427,17 @@ function renderProducts() {
         <div class="product-art">${p.art}</div>
         <div class="product-app">${p.app}</div>
       </div>
-      <div class="qty-control">
-        <button class="qty-btn minus" onclick="changeQty('${p.art}',-1)">−</button>
-        <span class="qty-num" id="qty_${p.art.replace(/[^a-z0-9]/gi,'_')}">${qty}</span>
-        <button class="qty-btn plus" onclick="changeQty('${p.art}',1)">+</button>
+      <div class="qty-wrap" id="qw_${p.art.replace(/[^a-z0-9]/gi,'_')}">
+        ${qty > 0
+          ? `<div class="qty-row">
+              ${[5,10,15,20,25,30].map(n => `<button class="qp${qty===n?' qp-on':''}" onclick="setQty('${p.art}',${n})">${n}</button>`).join('')}
+              <input class="qi" type="number" value="${qty}" min="1" placeholder="др"
+                onchange="setQty('${p.art}',parseInt(this.value)||0)"
+                onclick="this.select()" style="width:46px;padding:5px 4px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-weight:700;text-align:center;outline:none"/>
+              <button class="qdel" onclick="setQty('${p.art}',0)">✕</button>
+            </div>`
+          : `<button class="qadd" onclick="setQty('${p.art}',5)">+ Добавить</button>`
+        }
       </div>
     </div>`;
   }).join('');
@@ -432,28 +446,25 @@ function renderProducts() {
 }
 
 function setQty(art, qty) {
-  if (qty <= 0) {
-    delete cart[art];
-  } else {
-    cart[art] = qty;
-  }
-  // Re-render just this product row
-  const p = PRODUCTS.find(x => x.art === art);
-  if (!p) return;
+  if (qty <= 0) delete cart[art];
+  else cart[art] = qty;
+
   const key = art.replace(/[^a-z0-9]/gi,'_');
   const itemEl = document.getElementById('pi_' + key);
-  const qcEl   = document.getElementById('qc_' + key);
+  const wrapEl = document.getElementById('qw_' + key);
   if (itemEl) itemEl.className = 'product-item ' + (cart[art] > 0 ? 'selected' : '');
-  if (qcEl) {
+  if (wrapEl) {
     const q = cart[art] || 0;
     if (q > 0) {
-      qcEl.innerHTML = `<div class="qty-btns">
-        ${[5,10,15,20,25,30].map(n => `<button class="qty-preset ${q===n?'active':''}" onclick="setQty('${art}',${n})">${n}</button>`).join('')}
-        <input class="qty-custom" type="number" value="${q}" min="1" placeholder="др." onchange="setQty('${art}',parseInt(this.value)||0)" onclick="this.select()"/>
-        <button class="qty-btn-del" onclick="setQty('${art}',0)">✕</button>
+      wrapEl.innerHTML = `<div class="qty-row">
+        ${[5,10,15,20,25,30].map(n => `<button class="qp${q===n?' qp-on':''}" onclick="setQty('${art}',${n})">${n}</button>`).join('')}
+        <input class="qi" type="number" value="${q}" min="1" placeholder="др"
+          onchange="setQty('${art}',parseInt(this.value)||0)"
+          onclick="this.select()" style="width:46px;padding:5px 4px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-weight:700;text-align:center;outline:none"/>
+        <button class="qdel" onclick="setQty('${art}',0)">✕</button>
       </div>`;
     } else {
-      qcEl.innerHTML = `<button class="qty-add-btn" onclick="setQty('${art}',5)">+ Добавить</button>`;
+      wrapEl.innerHTML = `<button class="qadd" onclick="setQty('${art}',5)">+ Добавить</button>`;
     }
   }
   updateCartBar();

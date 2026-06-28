@@ -381,6 +381,13 @@ function renderOrderCard(num, mini, items) {
   const orderItems = items || allOrders.filter(o => o.orderNum === num);
   if (!orderItems.length) return '';
   const first  = orderItems[0];
+  const fmtDate = (d) => {
+    if (!d) return '—';
+    if (String(d).includes('GMT')) {
+      try { return new Date(d).toLocaleDateString('ru-RU'); } catch(e) { return d; }
+    }
+    return d;
+  };
   const status = first.status || '🆕 Новый';
   const cls    = status.includes('Новый') ? 'new' : status.includes('Принят') ? 'accepted' : status.includes('Отправлен') ? 'sent' : '';
   const badgeCls = status.includes('Новый') ? 'status-new' : status.includes('Принят') ? 'status-accepted' : status.includes('Отправлен') ? 'status-sent' : status.includes('Доставлен') ? 'status-delivered' : 'status-cancelled';
@@ -392,7 +399,7 @@ function renderOrderCard(num, mini, items) {
         <div>
           <div class="order-num">${num}</div>
           <div class="order-shop">🏪 ${first.shop}</div>
-          <div class="order-meta">${first.date} · ${orderItems.length} позиц. · ${totalQty} шт.</div>
+          <div class="order-meta">${fmtDate(first.date)} · ${orderItems.length} позиц. · ${totalQty} шт.</div>
         </div>
         <span class="status-badge ${badgeCls}">${status}</span>
       </div>
@@ -404,7 +411,7 @@ function renderOrderCard(num, mini, items) {
       <div>
         <div class="order-num">${num}</div>
         <div class="order-shop">🏪 ${first.shop}</div>
-        <div class="order-meta">${first.date} · ${first.time || ''} · ${first.phone || ''}</div>
+        <div class="order-meta">${fmtDate(first.date)} · ${first.time || ''} · ${first.phone || ''}</div>
         <div class="order-meta">${orderItems.length} позиц. · ${totalQty} шт.</div>
       </div>
       <select class="status-select" onchange="updateStatus('${num}', this.value)">
@@ -456,7 +463,7 @@ function openOrderModal(num) {
       <div style="font-weight:700">${first.shop}</div>
       <div style="font-size:12px;color:#888">${first.address || ''}</div>
       <div style="font-size:12px;color:#888">${first.phone || ''} · ${first.contact || ''}</div>
-      <div style="font-size:12px;color:#888">${first.date} ${first.time || ''}</div>
+      <div style="font-size:12px;color:#888">${fmtDate(first.date)} ${first.time || ''}</div>
     </div>
     <div style="font-size:11px;color:#aaa;margin-bottom:8px">ТОВАРЫ</div>
     ${items.map(o => `
