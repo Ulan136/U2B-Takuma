@@ -188,13 +188,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f8;min-height:100vh
     <div class="field">
       <label>Район</label>
       <select id="district">
-        <option value="">— выберите —</option>
-        <option>Жайылма</option>
-        <option>Шолаккорган</option>
-        <option>Ордабасы</option>
-        <option>Байдибек</option>
-        <option>Отырар</option>
-        <option>Сайрам</option>
+        <option value="">— загрузка... —</option>
       </select>
     </div>
     <div class="field">
@@ -933,20 +927,58 @@ function newOrder() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Загрузить цены из СКЛАД при открытии страницы
   showLoadingOverlay(true);
-  fetch(WEBAPP_URL + '?action=getPrices', { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) {
-        if (d.prices) PRICES = d.prices;
-        if (d.markup) MARKUP = d.markup;
+
+  // Загружаем настройки (районы, наценка, контакт) и цены параллельно
+  Promise.all([
+    fetch(WEBAPP_URL + '?action=getSettings', { redirect: 'follow' }).then(function(r){ return r.json(); }),
+    fetch(WEBAPP_URL + '?action=getPrices',   { redirect: 'follow' }).then(function(r){ return r.json(); })
+  ])
+  .then(function(results) {
+    var settings = results[0];
+    var prices   = results[1];
+
+    // Применить настройки
+    if (settings.ok) {
+      // Районы
+      if (settings.districts && settings.districts.length > 0) {
+        var sel = document.getElementById('district');
+        sel.innerHTML = '<option value="">— выберите —</option>';
+        settings.districts.forEach(function(d) {
+          var opt = document.createElement('option');
+          opt.value = d;
+          opt.textContent = d;
+          sel.appendChild(opt);
+        });
       }
-      showLoadingOverlay(false);
-    })
-    .catch(function() {
-      showLoadingOverlay(false);
-    });
+      // Наценка
+      if (settings.markup) MARKUP = settings.markup;
+      // Контакт
+      if (settings.contact || settings.phone) {
+        var contactStr = (settings.contact || '') + ': ' + (settings.phone || '');
+        document.querySelectorAll('.contact-info').forEach(function(el) {
+          el.textContent = contactStr;
+        });
+      }
+    }
+
+    // Применить цены
+    if (prices.ok) {
+      if (prices.prices) PRICES = prices.prices;
+      if (prices.markup) MARKUP = prices.markup;
+    }
+
+    showLoadingOverlay(false);
+  })
+  .catch(function(err) {
+    console.error('Ошибка загрузки настроек:', err);
+    // Fallback — дефолтные районы
+    var sel = document.getElementById('district');
+    sel.innerHTML = '<option value="">— выберите —</option>' +
+      ['Жайылма','Шолаккорган','Ордабасы','Байдибек','Отырар','Сайрам']
+      .map(function(d){ return '<option>'+d+'</option>'; }).join('');
+    showLoadingOverlay(false);
+  });
 });
 
 function showLoadingOverlay(show) {
